@@ -39,7 +39,7 @@ $$
 EIC-Emb averages the signed progress over all ten pairs $i<j$, with $d_{ij}=a_j-a_i$ and $\tau=1$:
 
 $$
-\mathrm{EIC\text{-}Emb}=\frac{1}{10}\sum_{i<j}\mathrm{sgn}(d_{ij})\min\!\left(1,\max\!\left(0,\frac{|d_{ij}|}{\tau}\right)\right).
+\mathrm{EIC-Emb}=\frac{1}{10}\sum_{i<j}\mathrm{sgn}(d_{ij})\min(1,\max(0,|d_{ij}|/\tau)).
 $$
 
 It applies to intensity cases with a paired target. Higher is better; negative values indicate decreasing progress as strength increases.
@@ -47,13 +47,13 @@ It applies to intensity cases with a paired target. Higher is better; negative v
 **Emotion similarity (E-SIM)** measures the cosine similarity of edited and paired-target emotion embeddings. It applies when a paired target exists. Higher is better.
 
 $$
-\mathrm{E\text{-}SIM}=\cos\!\left(f_E(x_e),f_E(x_t)\right)
+\mathrm{E-SIM}=\cos(f_E(x_e),f_E(x_t))
 $$
 
 **Directional editing score (DES)** measures whether the edit moves in the source-to-target emotion direction. It applies when a paired target exists. Higher is better. A zero edited displacement scores zero; a zero target displacement is invalid.
 
 $$
-\mathrm{DES}=\cos\!\left(f_E(x_e)-f_E(x_s),f_E(x_t)-f_E(x_s)\right)
+\mathrm{DES}=\cos(f_E(x_e)-f_E(x_s),f_E(x_t)-f_E(x_s))
 $$
 
 ## Preservation
@@ -61,13 +61,13 @@ $$
 **Relative word error rate ($\Delta$WER)** measures the change in transcription error against the same reference transcript. For Chinese, character tokenization makes this effectively $\Delta$CER. It applies to all tasks. Lower is better.
 
 $$
-\Delta\mathrm{WER}=\mathrm{WER}\!\left(y,A(x_e)\right)-\mathrm{WER}\!\left(y,A(x_s)\right)
+\Delta\mathrm{WER}=\mathrm{WER}(y,A(x_e))-\mathrm{WER}(y,A(x_s))
 $$
 
 **Speaker similarity (S-SIM)** measures preservation of the source speaker's identity. It applies to all tasks. Higher is better.
 
 $$
-\mathrm{S\text{-}SIM}=\cos\!\left(f_S(x_s),f_S(x_e)\right)
+\mathrm{S-SIM}=\cos(f_S(x_s),f_S(x_e))
 $$
 
 ## Quality
