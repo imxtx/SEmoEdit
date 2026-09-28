@@ -39,7 +39,7 @@ $$
 EIC-Emb averages the signed progress over all ten pairs $i<j$, with $d_{ij}=a_j-a_i$ and $\tau=1$:
 
 $$
-\mathrm{EIC-Emb}=\frac{1}{10}\sum_{i<j}\mathrm{sgn}(d_{ij})\min(1,\max(0,|d_{ij}|/\tau)).
+\mathrm{EIC-Emb}=\frac{1}{10}\sum_{i\lt j}\mathrm{sgn}(d_{ij})\min(1,\max(0,|d_{ij}|/\tau))
 $$
 
 It applies to intensity cases with a paired target. Higher is better; negative values indicate decreasing progress as strength increases.
@@ -58,7 +58,7 @@ $$
 
 ## Preservation
 
-**Relative word error rate ($\Delta$WER)** measures the change in transcription error against the same reference transcript. For Chinese, character tokenization makes this effectively $\Delta$CER. It applies to all tasks. Lower is better.
+**Relative word error rate ($\Delta$ WER)** measures the change in transcription error against the same reference transcript. For Chinese, character tokenization makes this effectively $\Delta$CER. It applies to all tasks. Lower is better.
 
 $$
 \Delta\mathrm{WER}=\mathrm{WER}(y,A(x_e))-\mathrm{WER}(y,A(x_s))
