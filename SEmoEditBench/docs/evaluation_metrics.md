@@ -8,7 +8,7 @@
 - $P(e\mid x)$: probability of emotion $e$ given waveform $x$.
 - $f_E(x)$, $f_S(x)$: emotion and speaker embeddings of waveform $x$.
 - $Q(x)$: predicted perceptual quality of waveform $x$.
-- $\operatorname{cos}(u,v)=u^\top v/(\lVert u\rVert_2\lVert v\rVert_2)$.
+- $\cos(u,v)=u^\top v/(\lVert u\rVert_2\lVert v\rVert_2)$.
 
 ## Editing success
 
@@ -39,7 +39,7 @@ $$
 EIC-Emb averages the signed progress over all ten pairs $i<j$, with $d_{ij}=a_j-a_i$ and $\tau=1$:
 
 $$
-\mathrm{EIC\text{-}Emb}=\frac{1}{10}\sum_{i<j}\operatorname{sgn}(d_{ij})\min\!\left(1,\max\!\left(0,\frac{|d_{ij}|}{\tau}\right)\right).
+\mathrm{EIC\text{-}Emb}=\frac{1}{10}\sum_{i<j}\mathrm{sgn}(d_{ij})\min\!\left(1,\max\!\left(0,\frac{|d_{ij}|}{\tau}\right)\right).
 $$
 
 It applies to intensity cases with a paired target. Higher is better; negative values indicate decreasing progress as strength increases.
@@ -47,13 +47,13 @@ It applies to intensity cases with a paired target. Higher is better; negative v
 **Emotion similarity (E-SIM)** measures the cosine similarity of edited and paired-target emotion embeddings. It applies when a paired target exists. Higher is better.
 
 $$
-\mathrm{E\text{-}SIM}=\operatorname{cos}\!\left(f_E(x_e),f_E(x_t)\right)
+\mathrm{E\text{-}SIM}=\cos\!\left(f_E(x_e),f_E(x_t)\right)
 $$
 
 **Directional editing score (DES)** measures whether the edit moves in the source-to-target emotion direction. It applies when a paired target exists. Higher is better. A zero edited displacement scores zero; a zero target displacement is invalid.
 
 $$
-\mathrm{DES}=\operatorname{cos}\!\left(f_E(x_e)-f_E(x_s),f_E(x_t)-f_E(x_s)\right)
+\mathrm{DES}=\cos\!\left(f_E(x_e)-f_E(x_s),f_E(x_t)-f_E(x_s)\right)
 $$
 
 ## Preservation
@@ -67,7 +67,7 @@ $$
 **Speaker similarity (S-SIM)** measures preservation of the source speaker's identity. It applies to all tasks. Higher is better.
 
 $$
-\mathrm{S\text{-}SIM}=\operatorname{cos}\!\left(f_S(x_s),f_S(x_e)\right)
+\mathrm{S\text{-}SIM}=\cos\!\left(f_S(x_s),f_S(x_e)\right)
 $$
 
 ## Quality
