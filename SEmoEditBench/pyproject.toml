@@ -1,0 +1,34 @@
+[project]
+name = "semoeditbench"
+version = "0.1.0"
+description = "Speech emotion editing benchmark"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "accelerate>=1.0.0",
+    "funasr>=1.4.3",
+    "jiwer>=4.0.0,<5",
+    "modelscope>=1.39.1",
+    "numpy>=1.26.0,<3",
+    "pyyaml>=6.0",
+    "safetensors>=0.5.0,<1",
+    "speechbrain>=1.0.3,<2",
+    "torch>=2.13.0",
+    "torchaudio>=2.11.0",
+    "tqdm>=4.66.0,<5",
+    "transformers>=4.46.0,<5",
+    "utmosv2",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["prepare", "evaluation"]
+
+[project.scripts]
+emoedit = "evaluation.cli:main"
+
+[tool.uv.sources]
+utmosv2 = { git = "https://github.com/sarulab-speech/UTMOSv2.git" }

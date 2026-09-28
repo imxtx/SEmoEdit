@@ -1,0 +1,9 @@
+.venv/
+raw_data/
+data/
+IndexTTS/
+checkpoints/
+outputs/
+results600/
+__pycache__/
+.pytest_cache/
