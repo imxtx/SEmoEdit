@@ -1,8 +1,13 @@
 # SEmoEdit
 
-[![Static Badge](https://img.shields.io/badge/Demo-blue)](https://semoedit.pages.dev/)
+[![Static Badge](https://img.shields.io/badge/Demo-blue)](https://semoedit.pages.dev/) [![Static Badge](https://img.shields.io/badge/SEmoEditBench-orange)
+](SEmoEditBench/README.md)
 
 Official implementation of the paper "SEmoEdit: Probing and Harnessing the Editability of Pre-trained Speech Flows".
+
+## SEmoEditBench
+
+The paper's 600-case benchmark, including its own environment, preparation, and evaluation instructions, is in [SEmoEditBench](SEmoEditBench/README.md).
 
 ## Star History
 
