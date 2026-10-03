@@ -1,0 +1,15 @@
+{
+  "f5_tts": {
+    "repository": "https://github.com/SWivid/F5-TTS.git",
+    "commit": "9c614e9657089213efc6a7421b30630be138a3f5"
+  },
+  "cosyvoice2": {
+    "repository": "https://github.com/FunAudioLLM/CosyVoice.git",
+    "commit": "074ca6dc9e80a2f424f1f74b48bdd7d3fea531cc",
+    "matcha_tts_commit": "dd9105b34bf2be2230f4aa1e4769fb586a3c824e"
+  },
+  "indextts2": {
+    "repository": "https://github.com/index-tts/index-tts.git",
+    "commit": "d9e41aac89fd00b3d71497fddb287b7f24613712"
+  }
+}

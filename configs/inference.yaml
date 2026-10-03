@@ -1,0 +1,50 @@
+benchmark:
+  config: ../SEmoEditBench/configs/benchmark.yaml
+  manifest_dir: ../SEmoEditBench/manifests600
+  output_root: ../SEmoEditBench/outputs
+
+runtime:
+  benchmark_python: ../SEmoEditBench/.venv/bin/python
+  gpu: 0
+  seed: 42
+  tau: 0.0
+  n_avg: 1
+
+tasks:
+  replacement:
+    strength: 1.0
+  erasure:
+    strength: 1.0
+  intensity:
+    strengths: [0.0, 0.25, 0.5, 0.75, 1.0]
+    second_pass_strength: 1.0
+
+models:
+  f5_tts:
+    python: ../third_party/F5-TTS/.venv/bin/python
+    upstream_root: ../third_party/F5-TTS
+    checkpoint: ../checkpoints/F5-TTS/F5TTS_v1_Base/model_1250000.safetensors
+    vocoder: ../checkpoints/vocos-mel-24khz
+    steps: 32
+    cfg: 2.0
+    sway: -1.0
+  cosyvoice2:
+    python: ../third_party/CosyVoice/.venv/bin/python
+    upstream_root: ../third_party/CosyVoice
+    checkpoint: ../checkpoints/CosyVoice/CosyVoice2-0.5B
+    steps: 10
+    cfg: 0.7
+  indextts2:
+    python: ../third_party/IndexTTS/.venv/bin/python
+    upstream_root: ../third_party/IndexTTS
+    checkpoint: ../checkpoints/IndexTTS/IndexTTS-2
+    steps: 25
+    cfg: 0.7
+
+bridging:
+  emotion2vec_model: ../checkpoints/emotion2vec_plus_large
+  donor_corpus: ../SEmoEditBench/raw_data/ESD
+  donor_manifest: bridging_donors.jsonl
+  index_root: ../SEmoEditBench/outputs/_emotion2vec_esd_index
+  batch_size: 32
+  synthesizer: indextts2

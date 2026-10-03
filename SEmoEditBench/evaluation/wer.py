@@ -5,7 +5,7 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
-from .common import language_for, load_config, normalize_text, read_jsonl, write_jsonl
+from .common import language_for, normalize_text, read_jsonl, write_jsonl
 
 
 def read_predictions(path: Path) -> dict[str, dict[str, Any]]:

@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+.venv/
+checkpoints/
+third_party/F5-TTS/
+third_party/CosyVoice/
+third_party/IndexTTS/
+configs/local*.yaml
+configs/local*.json
+outputs/

@@ -5,16 +5,17 @@ dataset_roots:
   CREMA-D: ../data/CREMA-D
 
 raw_dataset_roots:
-  ESD: /mnt/sdd/share/datasets/speech/emotional_datasets/ESD
-  RAVDESS: /mnt/sdd/share/datasets/speech/emotional_datasets/RAVDESS
-  IEMOCAP: /mnt/sdd/share/datasets/speech/emotional_datasets/IEMOCAP_full_release
-  CREMA-D: /mnt/sdd/share/datasets/speech/emotional_datasets/CREMA-D
+  ESD: ../raw_data/ESD
+  RAVDESS: ../raw_data/RAVDESS
+  IEMOCAP: ../raw_data/IEMOCAP_full_release
+  CREMA-D: ../raw_data/CREMA-D
 
 indextts2:
-  root: /path/to/IndexTTS # the environment .venv for indextts2 should be created in this directory 
-  checkpoint_dir: /mnt/sde/xietianxin/pretrained_models/IndexTTS/IndexTTS-2
-  config: /mnt/sde/xietianxin/pretrained_models/IndexTTS/IndexTTS-2/config.yaml
-  device: cuda:1
+  seed: 42
+  root: ../../third_party/IndexTTS
+  checkpoint_dir: ../../checkpoints/IndexTTS/IndexTTS-2
+  config: ../../checkpoints/IndexTTS/IndexTTS-2/config.yaml
+  device: cuda:0
   use_fp16: false
   use_cuda_kernel: false
   use_deepspeed: false

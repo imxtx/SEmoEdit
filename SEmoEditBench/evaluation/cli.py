@@ -141,7 +141,9 @@ def run_prepare(args: argparse.Namespace) -> int:
         split: read_jsonl(manifest_dir / f"{split}.jsonl") for split in DEFAULT_SPLITS
     }
     summary = prepare_audio(config, manifests, dry_run=args.dry_run)
-    print(json.dumps({"command": "prepare", "dry_run": args.dry_run, **summary}, indent=2))
+    print(
+        json.dumps({"command": "prepare", "dry_run": args.dry_run, **summary}, indent=2)
+    )
     return 0
 
 

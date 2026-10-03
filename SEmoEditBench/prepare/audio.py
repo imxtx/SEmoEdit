@@ -25,7 +25,9 @@ def load_config(path: Path) -> dict[str, Any]:
     for name in ("root", "checkpoint_dir", "config"):
         model_path = Path(config["indextts2"][name]).expanduser()
         config["indextts2"][name] = str(
-            (model_path if model_path.is_absolute() else config_dir / model_path).resolve()
+            (
+                model_path if model_path.is_absolute() else config_dir / model_path
+            ).resolve()
         )
     return config
 
@@ -54,7 +56,11 @@ def prepare_audio(
                 else:
                     dataset = record["dataset"]
                 destination = Path(config["dataset_roots"][dataset]) / value
-                if destination in existing or destination in copies or destination in syntheses:
+                if (
+                    destination in existing
+                    or destination in copies
+                    or destination in syntheses
+                ):
                     continue
                 if destination.is_file():
                     existing.add(destination)
@@ -63,12 +69,16 @@ def prepare_audio(
                 if source.is_file():
                     copies[destination] = source
                     continue
-                if field == "target_reference_audio" and record.get("target_reference_doner"):
+                if field == "target_reference_audio" and record.get(
+                    "target_reference_doner"
+                ):
                     reference = Path(value)
                     donor = Path(record["target_reference_doner"])
                     source_name = reference.stem.removeprefix(f"{donor.stem}_vc_")
                     raw_root = Path(config["raw_dataset_roots"][dataset])
-                    source_audio = raw_root / donor.with_name(source_name + reference.suffix)
+                    source_audio = raw_root / donor.with_name(
+                        source_name + reference.suffix
+                    )
                     donor_audio = raw_root / donor
                     if not source_audio.is_file():
                         raise FileNotFoundError(source_audio)
@@ -118,6 +128,8 @@ def prepare_audio(
                         str(settings["config"]),
                         "--device",
                         settings["device"],
+                        "--seed",
+                        str(settings["seed"]),
                         "--use-fp16" if settings["use_fp16"] else "--no-use-fp16",
                         "--use-cuda-kernel"
                         if settings["use_cuda_kernel"]

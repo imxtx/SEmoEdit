@@ -44,6 +44,8 @@ $$
 
 It applies to intensity cases with a paired target. Higher is better; negative values indicate decreasing progress as strength increases.
 
+SEmoEdit receives per-case results for all 128 intensity cases. EIC-Emb is reported for the 90 shared cases with a neutral source and an angry, happy, sad, or surprise target; the other 38 records retain their probability and reference-progress metrics with EIC-Emb set to `null`. Intensity summaries and comparison reports aggregate the 90 shared cases.
+
 **Emotion similarity (E-SIM)** measures the cosine similarity of edited and paired-target emotion embeddings. It applies when a paired target exists. Higher is better.
 
 $$

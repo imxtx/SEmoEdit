@@ -3,6 +3,10 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+import random
+
+import numpy as np
+import torch
 
 from tqdm.auto import tqdm
 
@@ -16,6 +20,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--checkpoint-dir", type=Path, required=True)
     parser.add_argument("--config", type=Path, required=True)
     parser.add_argument("--device", required=True)
+    parser.add_argument("--seed", type=int, required=True)
     parser.add_argument(
         "--use-fp16", action=argparse.BooleanOptionalAction, default=False
     )
@@ -46,6 +51,7 @@ def main() -> None:
     args = parse_args()
     from indextts.infer_v2 import IndexTTS2
 
+    cache = args.checkpoint_dir.resolve() / "hf_cache"
     tts = IndexTTS2(
         cfg_path=str(args.config.resolve()),
         model_dir=str(args.checkpoint_dir.resolve()),
@@ -54,9 +60,19 @@ def main() -> None:
         use_cuda_kernel=args.use_cuda_kernel,
         use_deepspeed=args.use_deepspeed,
         use_qwen_emo=args.use_qwen_emo,
+        aux_paths={
+            "w2v_bert": str(cache / "w2v-bert-2.0"),
+            "semantic_codec": str(cache / "semantic_codec/model.safetensors"),
+            "campplus": str(cache / "campplus_cn_common.bin"),
+            "bigvgan": str(cache / "bigvgan"),
+        },
     )
     jobs = read_jobs(args.jobs)
     for job in tqdm(jobs, desc="Generate CREMA-D references"):
+        random.seed(args.seed)
+        np.random.seed(args.seed)
+        torch.manual_seed(args.seed)
+        torch.cuda.manual_seed_all(args.seed)
         destination = Path(job["output_path"])
         destination.parent.mkdir(parents=True, exist_ok=True)
         tts.infer(
