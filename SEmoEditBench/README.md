@@ -49,6 +49,50 @@ Preparation does not sample cases or write new manifests. The nine checked-in ma
 
 New CREMA-D references use `indextts2.seed` (default 42), reset for each reference so partial reruns produce the same result. Existing prepared references are reused; to regenerate one with the fixed seed, remove only that generated reference from `SEmoEditBench/data/` before preparation.
 
+## Run inference
+
+Complete the [backbone setup](../third_party/README.md) and configure model paths in `configs/local.yaml` as described in the [main README](../README.md#installation). Set `runtime.gpu` in that file; the launcher selects that GPU and dispatches each backbone to its configured environment.
+
+Start with one replacement case:
+
+```bash
+SEmoEditBench/.venv/bin/python scripts/run.py \
+  --model f5_tts \
+  --config configs/local.yaml \
+  --task replacement \
+  --max-cases 1 \
+  --validate
+```
+
+Run all cases for each backbone:
+
+```bash
+export SEMOEDIT_PYTHON="$PWD/SEmoEditBench/.venv/bin/python"
+bash scripts/run_f5_tts.sh --config configs/local.yaml
+bash scripts/run_cosyvoice2.sh --config configs/local.yaml
+bash scripts/run_indextts2.sh --config configs/local.yaml
+```
+
+| Option | Description |
+| --- | --- |
+| `--task` | `replacement`, `erasure`, `intensity`, or `all` (default) |
+| `--max-cases N` | Run only the first N selected cases |
+| `--case-id ID` | Select a manifest case; repeat for multiple cases |
+| `--dry-run` | Check inputs without loading the models |
+| `--validate` | Check zero-strength and same-condition identity with real networks |
+
+Intensity runs use strengths `0`, `0.25`, `0.5`, `0.75`, and `1`. Each nonzero strength completes a first-pass edit, Emotion2Vec donor retrieval, IndexTTS2 bridge synthesis, and a second-pass edit. By default, retrieval uses the fixed **35,000-utterance ESD donor set**, defined and ordered in [bridging_donors.jsonl](../configs/bridging_donors.jsonl); its index is built on first use. You can configure [custom donor data](../docs/emotion_bridging.md#custom-donor-data) for your own runs. Single-sample CLI/Python runs bridge intermediate strengths by default; the benchmark intensity protocol bridges every nonzero strength, including `1`.
+
+Outputs are written to `SEmoEditBench/outputs/<model>_semoedit_600cases/`:
+
+```text
+<split>/<case_id>.wav              # Replacement / erasure; strength 1 for intensity
+<split>/<case_id>/<strength>.wav   # Five intensity strengths
+_run/                             # Intermediate audio, retrieval results and settings
+```
+
+Rerun the same command to resume completed cases. Use a new output root when changing the configuration.
+
 ## Evaluate
 
 Place edited WAV files under `SEmoEditBench/outputs/<system>/<split>/<case_id>.wav`, where `<split>` is a filename stem in `SEmoEditBench/manifests600/`. For intensity cases, also provide `SEmoEditBench/outputs/<system>/<split>/<case_id>/<strength>.wav` for strengths `0`, `0.25`, `0.5`, `0.75`, and `1`. The evaluator checks output coverage before loading models.

@@ -52,25 +52,67 @@ def edit_prepared(
     return editor.decode(edited, vocoder_seed), diagnostics
 
 
-def edit(editor, case, strength=1.0, seed=42, tau=0.0, source_index=0):
+def edit(
+    editor,
+    case,
+    strength=1.0,
+    seed=42,
+    tau=0.0,
+    source_index=0,
+    bridging=None,
+    emotion_bridging=True,
+):
     """Generate source speech from its reference, then edit toward the target.
 
     case contains source_audio, text, target_reference_audio and
     target_reference_text. The source reference must speak case['text'].
-    strength controls direct transport; benchmark emotion bridging is a
-    separate two-pass procedure orchestrated by scripts/run.py.
-    Returns (waveform tensor, per-step diagnostics).
+    For 0 < strength < 1, bridging must be an EmotionBridge. Retrieve a donor
+    from the first-pass edit, synthesize a reference, then edit at strength 1.
+    Strengths 0 and 1 return the direct result without bridging.
+    Set emotion_bridging=False to use direct transport at any strength.
+    Returns (waveform tensor, diagnostics with first_pass and optional
+    bridging / second_pass entries).
     """
-    source, source_branch, target_branch = editor.prepare(
-        case, derived_seed(seed, source_index, 0)
-    )
-    return edit_prepared(
+    if not 0 <= strength <= 1:
+        raise ValueError("strength must be between 0 and 1")
+    use_bridging = emotion_bridging and 0 < strength < 1
+    if use_bridging and bridging is None:
+        raise ValueError("An EmotionBridge is required for 0 < strength < 1")
+    condition_seed = derived_seed(seed, source_index, 0)
+    edit_seed = derived_seed(seed, source_index, 1)
+    vocoder_seed = derived_seed(seed, source_index, 2)
+    source, source_branch, target_branch = editor.prepare(case, condition_seed)
+    waveform, steps = edit_prepared(
         editor,
         source,
         source_branch,
         target_branch,
-        derived_seed(seed, source_index, 1),
+        edit_seed,
         strength,
         tau,
-        derived_seed(seed, source_index, 2),
+        vocoder_seed,
     )
+    diagnostics = {"first_pass": steps}
+    if use_bridging:
+        reference, diagnostics["bridging"] = bridging.reference(
+            waveform, editor.sample_rate, case, condition_seed, source_index, strength
+        )
+        bridge_case = {
+            **case,
+            "target_reference_audio": str(reference),
+            "target_reference_text": case["text"],
+        }
+        source, source_branch, target_branch = editor.prepare(
+            bridge_case, condition_seed
+        )
+        waveform, diagnostics["second_pass"] = edit_prepared(
+            editor,
+            source,
+            source_branch,
+            target_branch,
+            edit_seed,
+            1.0,
+            tau,
+            vocoder_seed,
+        )
+    return waveform, diagnostics

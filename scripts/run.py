@@ -224,8 +224,6 @@ def main():
     retrieval = [
         benchmark_python,
         SCRIPTS / "bridge_retrieval.py",
-        "--donor-manifest",
-        resolve(config_dir, bridge["donor_manifest"]),
         "--index-root",
         index_root,
         "--model",
@@ -235,6 +233,8 @@ def main():
         "--batch-size",
         bridge["batch_size"],
     ]
+    if bridge["donor_manifest"] is not None:
+        retrieval += ["--donor-manifest", resolve(config_dir, bridge["donor_manifest"])]
     run_command(retrieval + ["build", "--corpus-root", donor_corpus], environment)
     run_command(
         retrieval + ["search", "--jobs", jobs_path, "--matches", matches_path],

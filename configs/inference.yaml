@@ -43,7 +43,9 @@ models:
 
 bridging:
   emotion2vec_model: ../checkpoints/emotion2vec_plus_large
+  # Any directory containing donor WAVs; ESD is the paper reproduction default.
   donor_corpus: ../SEmoEditBench/raw_data/ESD
+  # Set to null to recursively index all WAVs under donor_corpus.
   donor_manifest: bridging_donors.jsonl
   index_root: ../SEmoEditBench/outputs/_emotion2vec_esd_index
   batch_size: 32

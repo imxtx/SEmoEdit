@@ -6,7 +6,7 @@ Official implementation of **SEmoEdit: Probing and Harnessing the Editability of
 
 SEmoEdit edits the emotion of generated speech using pre-trained speech flows. It supports **F5-TTS, CosyVoice2, and IndexTTS2**, with a shared Python API, single-sample CLI, and the 600-case SEmoEditBench pipeline for emotion replacement, erasure, and intensity editing.
 
-[Installation](#installation) · [Single-sample CLI](#single-sample-cli) · [Python API](#python-api) · [Batch inference](#batch-inference) · [Benchmark](#benchmark)
+[Installation](#installation) · [Single-sample CLI](#single-sample-cli) · [Python API](#python-api) · [Batch inference](#batch-inference) · [Benchmark](#benchmark) · [Citation](#citation)
 
 ## Installation
 
@@ -60,13 +60,19 @@ conda run -n cosyvoice2 python -c 'import sys; print(sys.executable)'
 
 Single-sample inference accepts model paths directly on the command line. For benchmark runs, in `configs/local.yaml`, set `models.f5_tts.python` and `models.cosyvoice2.python` to the printed executable paths. Check the `upstream_root`, `checkpoint`, and F5-TTS `vocoder` paths if you use a different directory layout. YAML paths are relative to the configuration file's directory; absolute paths are also accepted.
 
-Set `bridging.donor_corpus` to the root of the complete ESD corpus, matching `raw_dataset_roots.ESD` in the benchmark configuration. The prepared benchmark audio contains only the selected cases; donor retrieval requires the complete corpus.
+Configure benchmark donor data using the [emotion bridging guide](docs/emotion_bridging.md#benchmark-configuration).
 
 | Backbone | Model argument | Environment |
 | --- | --- | --- |
 | F5-TTS | `f5_tts` | Conda `f5-tts` |
 | CosyVoice2 | `cosyvoice2` | Conda `cosyvoice2` |
 | IndexTTS2 | `indextts2` | `third_party/IndexTTS/.venv` |
+
+## Emotion bridging
+
+Single-sample CLI and Python inference use emotion bridging by default for `0 < strength < 1`. Strengths `0` and `1` use direct transport. Pass `--no-emotion-bridging` or `emotion_bridging=False` to disable bridging at intermediate strengths.
+
+See the [emotion bridging guide](docs/emotion_bridging.md) for environment setup, donor indexing, custom WAV datasets, CLI/Python examples, and benchmark configuration.
 
 ## Single-sample CLI
 
@@ -124,7 +130,7 @@ CUDA_VISIBLE_DEVICES=0 third_party/IndexTTS/.venv/bin/python scripts/edit.py \
   --output outputs/indextts2.wav
 ```
 
-Each command writes a WAV and an automatically generated JSON sidecar containing the inputs, settings, and solver diagnostics. No input JSON file is required. Command-line paths are relative to the current working directory.
+Each command writes a WAV and a JSON sidecar containing the inputs, settings, and solver diagnostics. No input JSON file is required. Command-line paths are relative to the current working directory.
 
 | Option | Description | Default |
 | --- | --- | --- |
@@ -139,12 +145,13 @@ Each command writes a WAV and an automatically generated JSON sidecar containing
 | `--steps`, `--cfg`, `--sway` | Solver settings; `--sway` applies to F5-TTS | Model configuration |
 | `--seed` | Random seed | `42` |
 | `--tau` | Start time for transport updates | `0` |
-| `--strength` | Direct editing strength in `[0, 1]` | `1` |
+| `--strength` | First-pass editing strength in `[0, 1]`; intermediate values use bridging by default | `1` |
+| `--no-emotion-bridging` | Use direct transport at intermediate strengths | Bridging enabled |
 | `--config` | Optional override of the default configuration file | `configs/inference.yaml` |
 
-Command-line values override the configuration defaults. You can omit model paths and solver options when they are already configured in `configs/inference.yaml`, or pass `--config configs/local.yaml` to reuse your own settings. Use `--strength 0.5` for an intermediate direct edit, or `--strength 0` for the aligned generated source. Select the GPU with `CUDA_VISIBLE_DEVICES`.
+Command-line values override the configuration defaults. You can omit model paths and solver options when they are already configured in `configs/inference.yaml`, or pass `--config configs/local.yaml` to reuse your own settings. For `--strength 0.5`, follow the [bridging CLI guide](docs/emotion_bridging.md#single-sample-cli), or add `--no-emotion-bridging` for direct transport. Use `--strength 0` for the aligned generated source. `--strength 1` performs a direct full edit. Select the GPU with `CUDA_VISIBLE_DEVICES`.
 
-For an ESD example, use `SEmoEditBench/raw_data/ESD/0014/Neutral/0014_000001.wav` as the source and `SEmoEditBench/raw_data/ESD/0014/Happy/0014_000701.wav` as the target reference, with both transcripts set to `"The nine the eggs, I keep."`. Single-sample inference requires neither benchmark preparation nor an Emotion2Vec donor index.
+For an ESD example, use `SEmoEditBench/raw_data/ESD/0014/Neutral/0014_000001.wav` as the source and `SEmoEditBench/raw_data/ESD/0014/Happy/0014_000701.wav` as the target reference, with both transcripts set to `"The nine the eggs, I keep."`. Benchmark preparation is not required. Intermediate strengths require the [bridging setup](docs/emotion_bridging.md#environment-and-donor-index) unless `--no-emotion-bridging` is specified.
 
 ## Python API
 
@@ -171,7 +178,7 @@ case = {
     "target_reference_text": "What a wonderful day.",
 }
 
-waveform, diagnostics = edit(editor, case, strength=1.0, seed=42)
+waveform, diagnostics = edit(editor, case, strength=1, seed=42)
 output = Path("outputs/edited.wav")
 output.parent.mkdir(parents=True, exist_ok=True)
 sf.write(
@@ -182,7 +189,7 @@ sf.write(
 )
 ```
 
-`edit()` returns a waveform tensor and per-step diagnostics. Reuse the editor for subsequent samples. To load another backbone, use its model name, checkpoint, and upstream directory with these settings:
+`edit()` returns a waveform tensor and a diagnostics dictionary with `first_pass`. Reuse the editor for subsequent samples. For intermediate strengths, follow the [bridging Python guide](docs/emotion_bridging.md#python-api-and-batches), or pass `emotion_bridging=False` for direct transport. To load another backbone, use its model name, checkpoint, and upstream directory with these settings:
 
 | Model | `steps` | `cfg` | Additional `load_editor()` arguments |
 | --- | --- | --- | --- |
@@ -208,9 +215,7 @@ for index, line in enumerate(manifest.read_text(encoding="utf-8").splitlines()):
     for field in ("source_audio", "target_reference_audio"):
         case[field] = str((manifest.parent / case[field]).resolve())
 
-    waveform, diagnostics = edit(
-        editor, case, strength=1.0, seed=42, source_index=index
-    )
+    waveform, diagnostics = edit(editor, case, strength=1, seed=42, source_index=index)
     sf.write(
         output_dir / f"{index:05d}.wav",
         waveform.detach().float().cpu().numpy().reshape(-1),
@@ -221,77 +226,25 @@ for index, line in enumerate(manifest.read_text(encoding="utf-8").splitlines()):
 
 This loads the model once and writes numbered WAVs. `source_index` assigns each sample an independent random stream; keep the manifest order fixed for repeatable runs. For the fixed SEmoEditBench manifests, use the batch CLI below.
 
+For intermediate-strength batches, follow the [bridging batch guide](docs/emotion_bridging.md#python-api-and-batches), or pass `emotion_bridging=False` for direct transport.
+
 ## Benchmark
 
-### Prepare data
+SEmoEditBench provides **600 fixed cases: 320 replacement, 152 erasure, and 128 intensity**. See the [SEmoEditBench README](SEmoEditBench/README.md) for dataset setup, inference options, output layout, and evaluation details.
 
-Install the benchmark environment and obtain ESD, IEMOCAP, RAVDESS, and CREMA-D. Configure their locations in `SEmoEditBench/configs/benchmark.yaml`, then prepare the fixed audio:
+After configuring dataset locations in `SEmoEditBench/configs/benchmark.yaml` and model paths in `configs/local.yaml`, prepare the audio and run each backbone:
 
 ```bash
 uv sync --project SEmoEditBench --locked
-uv run --project SEmoEditBench emoedit prepare --config SEmoEditBench/configs/benchmark.yaml
-```
-
-Preparation copies the required audio and synthesizes missing CREMA-D references with IndexTTS2. See [SEmoEditBench](SEmoEditBench/README.md) for corpus layout and preparation details.
-
-### Run inference
-
-The benchmark contains **600 cases: 320 replacement, 152 erasure, and 128 intensity**. Set `runtime.gpu` in `configs/local.yaml`; the launcher selects that GPU and dispatches each backbone to its configured environment.
-
-Start with one replacement case:
-
-```bash
-SEmoEditBench/.venv/bin/python scripts/run.py \
-  --model f5_tts \
-  --config configs/local.yaml \
-  --task replacement \
-  --max-cases 1 \
-  --validate
-```
-
-Run all cases for each backbone:
-
-```bash
+uv run --project SEmoEditBench emoedit prepare \
+  --config SEmoEditBench/configs/benchmark.yaml
 export SEMOEDIT_PYTHON="$PWD/SEmoEditBench/.venv/bin/python"
 bash scripts/run_f5_tts.sh --config configs/local.yaml
 bash scripts/run_cosyvoice2.sh --config configs/local.yaml
 bash scripts/run_indextts2.sh --config configs/local.yaml
 ```
 
-| Option | Description |
-| --- | --- |
-| `--task` | `replacement`, `erasure`, `intensity`, or `all` (default) |
-| `--max-cases N` | Run only the first N selected cases |
-| `--case-id ID` | Select a manifest case; repeat for multiple cases |
-| `--dry-run` | Check inputs without loading the models |
-| `--validate` | Check zero-strength and same-condition identity with real networks |
-
-Intensity runs use strengths `0`, `0.25`, `0.5`, `0.75`, and `1`. Each nonzero strength completes a first-pass edit, Emotion2Vec retrieval from the fixed **35,000-utterance ESD donor set**, IndexTTS2 bridge synthesis, and a second-pass edit. The donor definitions and order are fixed in [bridging_donors.jsonl](configs/bridging_donors.jsonl); its index is built on first use. Direct CLI/Python strength interpolation uses the transport stage alone.
-
-Outputs are written to `SEmoEditBench/outputs/<model>_semoedit_600cases/`:
-
-```text
-<split>/<case_id>.wav              # Replacement / erasure; strength 1 for intensity
-<split>/<case_id>/<strength>.wav   # Five intensity strengths
-_run/                             # Intermediate audio, retrieval results and settings
-```
-
-Rerun the same command to resume completed cases. Use a new output root when changing the configuration.
-
-### Evaluate
-
-From the repository root, evaluate a completed system:
-
-```bash
-uv run --project SEmoEditBench emoedit evaluate \
-  --config SEmoEditBench/configs/benchmark.yaml \
-  --manifest-dir SEmoEditBench/manifests600 \
-  --output-root SEmoEditBench/outputs/f5_tts_semoedit_600cases \
-  --emotion-model checkpoints/emotion2vec_plus_large \
-  --results-root SEmoEditBench/results600
-```
-
-See [evaluation metrics](SEmoEditBench/docs/evaluation_metrics.md) for metric definitions.
+Evaluate the generated audio following the [evaluation instructions](SEmoEditBench/README.md#evaluate).
 
 ## Project layout
 
@@ -299,20 +252,11 @@ See [evaluation metrics](SEmoEditBench/docs/evaluation_metrics.md) for metric de
 semoedit/            # Transport, inference API, bridging and model adapters
 scripts/             # Single-sample CLI and benchmark orchestration
 configs/             # Inference settings and fixed donor manifest
+docs/                # Bridging and development guides
 SEmoEditBench/       # Benchmark manifests, preparation and evaluation
 third_party/         # Upstream setup and version records
 ```
 
-## Development
-
-Install the Git hook to run Ruff's safe lint fixes and formatting automatically on staged Python files at each commit:
-
-```bash
-uvx --from pre-commit==4.2.0 pre-commit install
-uvx --from pre-commit==4.2.0 pre-commit run --all-files
-```
-
-If a hook changes files, review and stage those changes, then commit again. Ruff's version and rules are fixed in `ruff.toml`; third-party backbones are excluded. GitHub Actions checks lint and formatting on every push and pull request without downloading model weights or installing backbone dependencies.
 
 ## Citation
 
@@ -340,3 +284,8 @@ SEmoEdit is released under the [MIT License](LICENSE). Backbones, model weights,
    <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=imxtx/semoedit&type=date&legend=top-left" />
  </picture>
 </a>
+
+
+## Development
+
+[Development guide](docs/development.md)

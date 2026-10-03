@@ -26,9 +26,26 @@ def write_jsonl(path, rows):
     )
 
 
-def donor_records(corpus_root, manifest):
-    records = read_jsonl(manifest)
+def donor_records(corpus_root, manifest=None):
     corpus_root = corpus_root.resolve()
+    if manifest is None:
+        if not corpus_root.is_dir():
+            raise NotADirectoryError(corpus_root)
+        paths = sorted(
+            (
+                path
+                for path in corpus_root.rglob("*")
+                if path.is_file() and path.suffix.lower() == ".wav"
+            ),
+            key=lambda path: path.relative_to(corpus_root).as_posix(),
+        )
+        records = [{"audio": str(path.relative_to(corpus_root))} for path in paths]
+    else:
+        records = read_jsonl(manifest)
+    if not records:
+        raise ValueError(
+            "No donor audio found; provide a WAV directory or a nonempty manifest"
+        )
     for record in records:
         record["audio"] = str(corpus_root / record["audio"])
     return records
@@ -40,7 +57,7 @@ def build(args):
     status_path = args.index_root / "status.json"
     records = donor_records(args.corpus_root, args.donor_manifest)
     if metadata_path.exists() and read_jsonl(metadata_path) != records:
-        raise ValueError("Donor manifest changed; select a new --index-root")
+        raise ValueError("Donor audio list changed; select a new --index-root")
     if not metadata_path.exists():
         write_jsonl(metadata_path, records)
     status = (
@@ -49,7 +66,7 @@ def build(args):
         else None
     )
     if status and (
-        status["model"] != args.model
+        Path(status["model"]).resolve() != Path(args.model).resolve()
         or status["corpus_root"] != str(args.corpus_root.resolve())
     ):
         raise ValueError(f"Donor index settings changed: {args.index_root}")
@@ -114,9 +131,11 @@ def search(args):
             {
                 **job,
                 "donor_audio": records[int(index)]["audio"],
-                "donor_emotion": records[int(index)]["emotion"],
-                "donor_speaker_id": records[int(index)]["speaker_id"],
-                "donor_transcript": records[int(index)]["transcript"],
+                **{
+                    f"donor_{field}": records[int(index)][field]
+                    for field in ("emotion", "speaker_id", "transcript")
+                    if field in records[int(index)]
+                },
                 "cosine_similarity": float(score),
             }
             for job, index, score in zip(jobs, indices, scores, strict=True)
@@ -128,7 +147,11 @@ def search(args):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("phase", choices=("build", "search"))
-    parser.add_argument("--donor-manifest", type=Path, required=True)
+    parser.add_argument(
+        "--donor-manifest",
+        type=Path,
+        help="Optional JSONL donor list; otherwise recursively scan --corpus-root for WAVs",
+    )
     parser.add_argument("--index-root", type=Path, required=True)
     parser.add_argument("--corpus-root", type=Path)
     parser.add_argument("--jobs", type=Path)
@@ -137,7 +160,10 @@ def main():
     parser.add_argument("--device", default="cuda:0")
     parser.add_argument("--batch-size", type=int, default=32)
     args = parser.parse_args()
+    args.model = str(Path(args.model).expanduser().resolve())
     if args.phase == "build":
+        if args.corpus_root is None:
+            parser.error("--corpus-root is required for build")
         build(args)
     else:
         search(args)

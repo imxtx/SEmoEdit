@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import os
 from pathlib import Path
 import sys
 
@@ -12,6 +13,7 @@ import yaml
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from semoedit.inference import edit, load_editor
+from semoedit.bridging import EmotionBridge
 
 
 def main():
@@ -37,6 +39,30 @@ def main():
     parser.add_argument("--tau", type=float)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--strength", type=float, default=1.0)
+    parser.add_argument(
+        "--no-emotion-bridging",
+        action="store_false",
+        dest="emotion_bridging",
+        help="Use direct transport only for intermediate strengths",
+    )
+    parser.add_argument(
+        "--donor-index", type=Path, help="Complete donor index directory"
+    )
+    parser.add_argument(
+        "--emotion-model", type=Path, help="Local Emotion2Vec checkpoint"
+    )
+    parser.add_argument(
+        "--emotion-python", type=Path, help="Emotion2Vec environment executable"
+    )
+    parser.add_argument(
+        "--bridge-python", type=Path, help="IndexTTS2 environment executable"
+    )
+    parser.add_argument(
+        "--bridge-checkpoint", type=Path, help="IndexTTS2 checkpoint directory"
+    )
+    parser.add_argument(
+        "--bridge-upstream-root", type=Path, help="IndexTTS2 source directory"
+    )
     args = parser.parse_args()
     if not 0 <= args.strength <= 1:
         parser.error("--strength must be between 0 and 1")
@@ -70,9 +96,47 @@ def main():
         path = case[field].expanduser().resolve()
         sf.info(path)
         case[field] = str(path)
+    bridging = None
+    if args.emotion_bridging and 0 < args.strength < 1:
+        defaults = {
+            "donor_index": config["bridging"]["index_root"],
+            "emotion_model": config["bridging"]["emotion2vec_model"],
+            "emotion_python": runtime["benchmark_python"],
+            "bridge_python": config["models"]["indextts2"]["python"],
+            "bridge_checkpoint": config["models"]["indextts2"]["checkpoint"],
+            "bridge_upstream_root": config["models"]["indextts2"]["upstream_root"],
+        }
+        bridge_paths = {}
+        for field, default in defaults.items():
+            override = getattr(args, field)
+            path = (
+                override if override is not None else config_path.parent / default
+            ).expanduser()
+            bridge_paths[field] = (
+                Path(os.path.abspath(path))
+                if field.endswith("python")
+                else path.resolve()
+            )
+        bridging = EmotionBridge(
+            index_root=bridge_paths["donor_index"],
+            emotion2vec_model=bridge_paths["emotion_model"],
+            emotion_python=bridge_paths["emotion_python"],
+            index_python=bridge_paths["bridge_python"],
+            index_checkpoint=bridge_paths["bridge_checkpoint"],
+            index_upstream_root=bridge_paths["bridge_upstream_root"],
+            work_dir=args.output.with_suffix("").with_name(
+                args.output.stem + "_bridging"
+            ),
+        )
     editor = load_editor(args.model, **settings)
     waveform, diagnostics = edit(
-        editor, case, args.strength, runtime["seed"], runtime["tau"]
+        editor,
+        case,
+        args.strength,
+        runtime["seed"],
+        runtime["tau"],
+        bridging=bridging,
+        emotion_bridging=args.emotion_bridging,
     )
     samples = waveform.detach().float().cpu().numpy().reshape(-1)
     if not samples.size or not np.isfinite(samples).all():
@@ -90,6 +154,7 @@ def main():
                 },
                 "runtime": runtime,
                 "strength": args.strength,
+                "emotion_bridging": args.emotion_bridging,
                 "sample_rate": editor.sample_rate,
                 "steps": diagnostics,
             },
